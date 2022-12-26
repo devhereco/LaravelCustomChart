@@ -1,0 +1,29 @@
+{
+    "name": "devhereco/custom-chart",
+    "description": "A Laravel package to extract data from any model to imploment it to your custom chart.",
+    "keywords": ["laravel", "chart", "custom", "package"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "MohammedSB",
+            "email": "mohammed.b.dev@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Devhereco\\CustomChart\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Devhereco\\CustomChart\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "require": {
+        "guzzlehttp/guzzle": "^7.4"
+    }
+}
