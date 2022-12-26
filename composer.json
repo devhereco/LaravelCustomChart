@@ -22,8 +22,5 @@
             ]
         }
     },
-    "minimum-stability": "dev",
-    "require": {
-        "guzzlehttp/guzzle": "^7.4"
-    }
+    "minimum-stability": "dev"
 }
