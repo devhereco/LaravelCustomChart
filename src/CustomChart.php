@@ -9,14 +9,16 @@ class CustomChart
 {
     /*
      * $model => must be like => 'App\Models\Blaster\Store\Transaction',
+     * $title => Chart title
      * $aggregate_function => 'in:count,sum,avg|bail',
      * $aggregate_field => model field name,
      * $filter_days => integer
      */
     public static function create(
         $model, 
-        $aggregate_function, 
-        $aggregate_field, 
+        $title = Null,
+        $aggregate_function = 'count', 
+        $aggregate_field = 'id', 
         $filter_days = 30,
         $show_total = False, 
         $date_format = 'Y-m-d'
@@ -59,7 +61,7 @@ class CustomChart
             });
 
         $data = [
-            'name' => 'Transactions by Days',
+            'name' => $title ?? Null,
             'data' => $newData,
         ];
 
