@@ -1,19 +1,18 @@
 # Malath SMS 
 **Malath SMS** is a Laravel package that provides a method to use malath API services, with a few simple lines of code.
 
-[![downloads](https://badgen.net//packagist/dt/devhereco/malathsms)](https://packagist.org/packages/devhereco/malathsms)
-[![stars](https://badgen.net/github/stars/devhereco/Malath-SMS-Package)](https://github.com/devhereco/Malath-SMS-Package)
-[![contributors](https://badgen.net/github/contributors/devhereco/Malath-SMS-Package)](https://github.com/devhereco/Malath-SMS-Package)
-[![releases](https://badgen.net/github/releases/devhereco/Malath-SMS-Package)](https://github.com/devhereco/Malath-SMS-Package)
-[![issues](https://badgen.net/github/open-issues/devhereco/Malath-SMS-Package)](https://github.com/devhereco/Malath-SMS-Package)
-[![latest-release](https://badgen.net/packagist/v/devhereco/malathsms/latest)](https://packagist.org/packages/devhereco/malathsms)
+[![downloads](https://badgen.net//packagist/dt/devhereco/LaravelCustomChart)](https://packagist.org/packages/devhereco/LaravelCustomChart)
+[![stars](https://badgen.net/github/stars/devhereco/LaravelCustomChart)](https://github.com/devhereco/LaravelCustomChart)
+[![contributors](https://badgen.net/github/contributors/devhereco/LaravelCustomChart)](https://github.com/devhereco/LaravelCustomChart)
+[![releases](https://badgen.net/github/releases/devhereco/LaravelCustomChart)](https://github.com/devhereco/LaravelCustomChart)
+[![issues](https://badgen.net/github/open-issues/devhereco/LaravelCustomChart)](https://github.com/devhereco/LaravelCustomChart)
+[![latest-release](https://badgen.net/packagist/v/devhereco/LaravelCustomChart/latest)](https://packagist.org/packages/devhereco/LaravelCustomChart)
 
 ## Installation
 
 ### 1. Require with [Composer](https://getcomposer.org/)
 ```sh
-- composer require guzzle/guzzle
-- composer require devhereco/malathsms
+- composer require devhereco/custom-chart
 ```
 
 ### 2. Add Service Provider (Laravel 5.4 and below)
@@ -22,42 +21,17 @@ Latest Laravel versions have auto dicovery and automatically add service provide
 
 ```php
 // ...
-Devhereco\MalathSMS\ServiceProvider::class,
-```
-
-### 3. Migrations
-
-```sh
-php artisan migrate
-```
-
-### 4. env variables
-
-```sh
-MALATH_SMS_USERNAME=
-MALATH_SMS_PASSWORD=
-MALATH_SMS_SENDER=
+Devhereco\LaravelCustomChart\ServiceProvider::class,
 ```
 
 ## Usages
 
-### 1. One way messages
-This function will allow you to send messages to selected numbers.
+### 1. Generate Chart Data
+This function generate the data you will need to use for any chart.
 
 Examples:
 ```php
-use Devhereco\MalathSMS\MalathSMS;
+use Devhereco\CustomChart\CustomChart;
 
-MalathSMS::sendOneSide('966555644047', 'Test Message');
-// MalathSMS::sendOneSide(Receiver Number, Message);
-```
-
-### 2. Get Account Balance
-This function will show Malath account balance in your backend.
-
-Examples:
-```php
-use Devhereco\MalathSMS\MalathSMS;
-
-MalathSMS::getBalance();
+CustomChart::create(Transaction::class, 'sum', 'amount', '30');
 ```

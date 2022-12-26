@@ -17,9 +17,9 @@ class CustomChart
         $model, 
         $aggregate_function, 
         $aggregate_field, 
+        $filter_days = 30,
         $show_total = False, 
-        $date_format = 'Y-m-d', 
-        $filter_days = 30
+        $date_format = 'Y-m-d'
     ) {
         $collection = $model::get();
 
@@ -27,13 +27,13 @@ class CustomChart
             $data = $collection
                 ->sortBy('created_at')
                 ->groupBy(function ($entry) use ($date_format) {
-                    if ($entry->created_at instanceof \Carbon\Carbon) {
+                    if ($entry->created_at instanceof Carbon) {
                         return $entry->created_at
                             ->format($date_format);
                     } else {
 
                         if ($entry->created_at) {
-                            return \Carbon\Carbon::createFromFormat(
+                            return Carbon::createFromFormat(
                                 'Y-m-d H:i:s',
                                 $entry->created_at
                             )->format($date_format);
