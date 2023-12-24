@@ -15,12 +15,12 @@ class CustomChart
      * $filter_days => integer
      */
     public static function create(
-        $model, 
+        $model,
         $title = Null,
-        $aggregate_function = 'count', 
-        $aggregate_field = 'id', 
+        $aggregate_function = 'count',
+        $aggregate_field = 'id',
         $filter_days = 30,
-        $show_total = False, 
+        $show_total = False,
         $date_format = 'Y-m-d'
     ) {
         $collection = $model::get();
@@ -76,6 +76,12 @@ class CustomChart
             return Carbon::createFromFormat($date_format, $key)->format('Y') === $lastYear->format('Y');
         });
 
+        // Calculate percentage change between last month and the month before it
+        $monthBeforeLastMonth = Carbon::now()->subMonths(2);
+        $lastMonthBeforeData = $data->filter(function ($value, $key) use ($monthBeforeLastMonth, $date_format) {
+            return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $monthBeforeLastMonth->format('Y-m');
+        });
+
         CarbonPeriod::since(now()->subDays($filter_days))
             ->until(now())
             ->forEach(function (Carbon $date) use ($data, &$newData, $date_format) {
@@ -89,8 +95,34 @@ class CustomChart
             'this_month' => $thisMonthData->$aggregate_function(),
             'last_month' => $lastMonthData->$aggregate_function(),
             'this_year' => $thisYearData->$aggregate_function(),
-            'last_year' => $lastYearData->$aggregate_function()
+            'last_year' => $lastYearData->$aggregate_function(),
         ];
+
+        // Calculate percentage change between this month and last month
+        $thisMonthPercentageChange = $data['last_month'] !== 0 ? (($data['this_month'] - $data['last_month']) / $data['last_month']) * 100 : 0;
+
+        // Calculate percentage change between last month and the month before it
+        $lastMonthPercentageChange = $lastMonthBeforeData->sum() !== 0 ? (($data['last_month'] - $lastMonthBeforeData->sum()) / $lastMonthBeforeData->sum()) * 100 : 0;
+
+        // Calculate percentage change between this year and last year
+        $thisYearPercentageChange = $data['last_year'] !== 0 ? (($data['this_year'] - $data['last_year']) / $data['last_year']) * 100 : 0;
+
+        $percentageData['percentage_change'] = [
+            'this_month' => [
+                'value' => round($thisMonthPercentageChange, 2) . '%',
+                'status' => $thisMonthPercentageChange > 0 ? 'positive' : ($thisMonthPercentageChange < 0 ? 'negative' : 'no change')
+            ],
+            'last_month' => [
+                'value' => round($lastMonthPercentageChange, 2),
+                'status' => $lastMonthPercentageChange > 0 ? 'positive' : ($lastMonthPercentageChange < 0 ? 'negative' : 'no change')
+            ],
+            'this_year' => [
+                'value' => round($thisYearPercentageChange, 2) . '%',
+                'status' => $thisYearPercentageChange > 0 ? 'positive' : ($thisYearPercentageChange < 0 ? 'negative' : 'no change')
+            ]
+        ];
+
+        $data = array_merge($data, $percentageData);
 
         if ($show_total) {
             $total = 0;
