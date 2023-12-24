@@ -52,6 +52,12 @@ class CustomChart
         }
 
         $newData = collect([]);
+        $today = Carbon::now();
+
+        // This Month
+        $thisMonthData = $data->filter(function ($value, $key) use ($today, $date_format) {
+            return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $today->format('Y-m');
+        });
 
         CarbonPeriod::since(now()->subDays($filter_days))
             ->until(now())
@@ -63,6 +69,7 @@ class CustomChart
         $data = [
             'name' => $title ?? Null,
             'data' => $newData,
+            'this_month' => $thisMonthData->$aggregate_function(),
         ];
 
         if ($show_total) {
