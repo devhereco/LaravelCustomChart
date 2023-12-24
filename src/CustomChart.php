@@ -65,6 +65,11 @@ class CustomChart
             return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $lastMonth->format('Y-m');
         });
 
+        // This Year
+        $thisYearData = $data->filter(function ($value, $key) use ($today, $date_format) {
+            return Carbon::createFromFormat($date_format, $key)->format('Y') === $today->format('Y');
+        });
+
         CarbonPeriod::since(now()->subDays($filter_days))
             ->until(now())
             ->forEach(function (Carbon $date) use ($data, &$newData, $date_format) {
@@ -77,6 +82,7 @@ class CustomChart
             'data' => $newData,
             'this_month' => $thisMonthData->$aggregate_function(),
             'last_month' => $lastMonthData->$aggregate_function(),
+            'this_year' => $thisYearData->$aggregate_function(),
         ];
 
         if ($show_total) {
