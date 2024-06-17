@@ -12,15 +12,17 @@ class CustomChart
      * $title => Chart title
      * $aggregate_function => 'in:count,sum,avg|bail',
      * $aggregate_field => model field name,
-     * $filter_days => integer
+     * $filter_count => integer
+     * $filter_interval => 'days', 'weeks', 'months', 'years'
      */
     public static function create(
         $model,
-        $title = Null,
+        $title = null,
         $aggregate_function = 'count',
         $aggregate_field = 'id',
-        $filter_days = 30,
-        $show_total = False,
+        $filter_count = 30,
+        $filter_interval = 'days',
+        $show_total = false,
         $date_format = 'Y-m-d'
     ) {
         $collection = $model::get();
@@ -28,17 +30,16 @@ class CustomChart
         if (count($collection)) {
             $data = $collection
                 ->sortBy('created_at')
-                ->groupBy(function ($entry) use ($date_format) {
+                ->groupBy(function ($entry) use ($date_format, $filter_interval) {
                     if ($entry->created_at instanceof Carbon) {
-                        return $entry->created_at
-                            ->format($date_format);
+                        return self::formatDate($entry->created_at, $filter_interval, $date_format);
                     } else {
-
                         if ($entry->created_at) {
-                            return Carbon::createFromFormat(
-                                'Y-m-d H:i:s',
-                                $entry->created_at
-                            )->format($date_format);
+                            return self::formatDate(
+                                Carbon::createFromFormat('Y-m-d H:i:s', $entry->created_at),
+                                $filter_interval,
+                                $date_format
+                            );
                         } else {
                             return '';
                         }
@@ -52,86 +53,91 @@ class CustomChart
         }
 
         $newData = collect([]);
-        $today = Carbon::now();
+        $startDate = self::calculateStartDate($filter_count, $filter_interval);
 
-        // This Month
-        $thisMonthData = $data->filter(function ($value, $key) use ($today, $date_format) {
-            return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $today->format('Y-m');
-        });
-
-        // Last Month
-        $lastMonthData = $data->filter(function ($value, $key) use ($today, $date_format) {
-            $lastMonth = Carbon::now()->subMonth();
-            return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $lastMonth->format('Y-m');
-        });
-
-        // This Year
-        $thisYearData = $data->filter(function ($value, $key) use ($today, $date_format) {
-            return Carbon::createFromFormat($date_format, $key)->format('Y') === $today->format('Y');
-        });
-
-        // Last Year
-        $lastYearData = $data->filter(function ($value, $key) use ($today, $date_format) {
-            $lastYear = Carbon::now()->subYear();
-            return Carbon::createFromFormat($date_format, $key)->format('Y') === $lastYear->format('Y');
-        });
-
-        // Calculate percentage change between last month and the month before it
-        $monthBeforeLastMonth = Carbon::now()->subMonths(2);
-        $lastMonthBeforeData = $data->filter(function ($value, $key) use ($monthBeforeLastMonth, $date_format) {
-            return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $monthBeforeLastMonth->format('Y-m');
-        });
-
-        CarbonPeriod::since(now()->subDays($filter_days))
+        CarbonPeriod::since($startDate)
             ->until(now())
-            ->forEach(function (Carbon $date) use ($data, &$newData, $date_format) {
-                $key = $date->format($date_format);
+            ->forEach(function (Carbon $date) use ($data, &$newData, $filter_interval, $date_format) {
+                $key = self::formatDate($date, $filter_interval, $date_format);
                 $newData->put($key, $data[$key] ?? 0);
             });
 
         $data = [
-            'name' => $title ?? Null,
+            'name' => $title ?? null,
             'data' => $newData,
-            'this_month' => $thisMonthData->$aggregate_function(),
-            'last_month' => $lastMonthData->$aggregate_function(),
-            'this_year' => $thisYearData->$aggregate_function(),
-            'last_year' => $lastYearData->$aggregate_function(),
+            'this_month' => $newData->filter(function ($value, $key) use ($startDate, $date_format) {
+                return Carbon::createFromFormat($date_format, $key)->format('Y-m') === now()->format('Y-m');
+            })->sum(),
+            'last_month' => $newData->filter(function ($value, $key) use ($startDate, $date_format) {
+                $lastMonth = now()->subMonth();
+                return Carbon::createFromFormat($date_format, $key)->format('Y-m') === $lastMonth->format('Y-m');
+            })->sum(),
+            'this_year' => $newData->filter(function ($value, $key) use ($startDate, $date_format) {
+                return Carbon::createFromFormat($date_format, $key)->format('Y') === now()->format('Y');
+            })->sum(),
+            'last_year' => $newData->filter(function ($value, $key) use ($startDate, $date_format) {
+                $lastYear = now()->subYear();
+                return Carbon::createFromFormat($date_format, $key)->format('Y') === $lastYear->format('Y');
+            })->sum(),
         ];
 
-        // Calculate percentage change between this month and last month
-        $thisMonthPercentageChange = $data['last_month'] !== 0 ? (($data['this_month'] - $data['last_month']) / $data['last_month']) * 100 : 0;
-
-        // Calculate percentage change between last month and the month before it
-        $lastMonthPercentageChange = $lastMonthBeforeData->sum() !== 0 ? (($data['last_month'] - $lastMonthBeforeData->sum()) / $lastMonthBeforeData->sum()) * 100 : 0;
-
-        // Calculate percentage change between this year and last year
-        $thisYearPercentageChange = $data['last_year'] !== 0 ? (($data['this_year'] - $data['last_year']) / $data['last_year']) * 100 : 0;
-
-        $percentageData['percentage_change'] = [
-            'this_month' => [
-                'value' => round($thisMonthPercentageChange, 2) . '%',
-                'status' => $thisMonthPercentageChange > 0 ? 'positive' : ($thisMonthPercentageChange < 0 ? 'negative' : 'no change')
-            ],
-            'last_month' => [
-                'value' => round($lastMonthPercentageChange, 2),
-                'status' => $lastMonthPercentageChange > 0 ? 'positive' : ($lastMonthPercentageChange < 0 ? 'negative' : 'no change')
-            ],
-            'this_year' => [
-                'value' => round($thisYearPercentageChange, 2) . '%',
-                'status' => $thisYearPercentageChange > 0 ? 'positive' : ($thisYearPercentageChange < 0 ? 'negative' : 'no change')
-            ]
+        // Calculate percentage changes
+        $data['percentage_change'] = [
+            'this_month' => self::calculatePercentageChange($data['this_month'], $data['last_month']),
+            'last_month' => self::calculatePercentageChange($data['last_month'], $newData->sum() / count($newData)),
+            'this_year'  => self::calculatePercentageChange($data['this_year'], $data['last_year']),
         ];
-
-        $data = array_merge($data, $percentageData);
 
         if ($show_total) {
-            $total = 0;
-            foreach ($data['data'] as $row) {
-                $total += $row;
-            }
-            $data = array_merge($data, array('total' => $total));
+            $data['total'] = $newData->sum();
         }
 
         return $data;
+    }
+
+    private static function formatDate(Carbon $date, string $interval, string $date_format): string
+    {
+        switch ($interval) {
+            case 'weeks':
+                return $date->startOfWeek()->format($date_format);
+            case 'months':
+                return $date->startOfMonth()->format($date_format);
+            case 'years':
+                return $date->startOfYear()->format($date_format);
+            case 'days':
+            default:
+                return $date->format($date_format);
+        }
+    }
+
+    private static function calculateStartDate(int $count, string $interval): Carbon
+    {
+        switch ($interval) {
+            case 'weeks':
+                return now()->subWeeks($count);
+            case 'months':
+                return now()->subMonths($count);
+            case 'years':
+                return now()->subYears($count);
+            case 'days':
+            default:
+                return now()->subDays($count);
+        }
+    }
+
+    private static function calculatePercentageChange($current, $previous)
+    {
+        if ($previous == 0) {
+            return [
+                'value' => '0%',
+                'status' => 'no change'
+            ];
+        }
+
+        $change = (($current - $previous) / $previous) * 100;
+        return [
+            'value' => round($change, 2) . '%',
+            'status' => $change > 0 ? 'positive' : ($change < 0 ? 'negative' : 'no change')
+        ];
     }
 }
